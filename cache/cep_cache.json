@@ -1,0 +1,52 @@
+{
+    "04538133": {
+        "bairro": "Itaim Bibi",
+        "cidade": "São Paulo",
+        "estado": "SP"
+    },
+    "69010000": {
+        "bairro": "Centro",
+        "cidade": "Manaus",
+        "estado": "AM"
+    },
+    "50010000": {
+        "bairro": "Santo Antônio",
+        "cidade": "Recife",
+        "estado": "PE"
+    },
+    "70040010": {
+        "bairro": "Asa Norte",
+        "cidade": "Brasília",
+        "estado": "DF"
+    },
+    "60060440": {
+        "bairro": "Praia de Iracema",
+        "cidade": "Fortaleza",
+        "estado": "CE"
+    },
+    "80010010": {
+        "bairro": "Centro",
+        "cidade": "Curitiba",
+        "estado": "PR"
+    },
+    "30140071": {
+        "bairro": "Boa Viagem",
+        "cidade": "Belo Horizonte",
+        "estado": "MG"
+    },
+    "90010150": {
+        "bairro": "Centro Histórico",
+        "cidade": "Porto Alegre",
+        "estado": "RS"
+    },
+    "20031050": {
+        "bairro": "Centro",
+        "cidade": "Rio de Janeiro",
+        "estado": "RJ"
+    },
+    "01001000": {
+        "bairro": "Sé",
+        "cidade": "São Paulo",
+        "estado": "SP"
+    }
+}
