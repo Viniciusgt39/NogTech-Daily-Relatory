@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 _EXPECTED_CPF_DIGITS = 11
 
 
+
 def normalize_cpf(value: object) -> str | None:
 	"""Normaliza CPF para string de 11 dígitos sem formatação.
 
@@ -31,6 +32,7 @@ def normalize_cpf(value: object) -> str | None:
 		logger.warning("CPF com número inesperado de dígitos (%d): '%s'", len(digits), value)
 		return None
 	return digits
+
 
 
 def parse_brl(series: pd.Series) -> pd.Series:
@@ -52,24 +54,27 @@ def parse_brl(series: pd.Series) -> pd.Series:
 
 
 def read_transactions(csv_path: Path) -> pd.DataFrame:
-	"""Lê e normaliza o CSV de transações."""
-	logger.info("Lendo transações: %s", csv_path)
-	df = pd.read_csv(csv_path, sep=";", encoding="latin-1")
+    """Lê e normaliza o CSV de transações."""
+    logger.info("Lendo transações: %s", csv_path)
+    
+    # FORÇA O PANDAS A LER O CEP COMO STRING DESDE O INÍCIO
+    df = pd.read_csv(csv_path, sep=";", encoding="latin-1", dtype={"cep_cobranca": str})
 
-	df["cpf_aluno"] = df["cpf_aluno"].map(normalize_cpf)
-	df["data_transacao"] = pd.to_datetime(df["data_transacao"], errors="coerce", dayfirst=True)
-	df["mes_referencia"] = df["data_transacao"].dt.to_period("M").astype(str)
-	df["valor_brl"] = parse_brl(df["valor_brl"])
-	df["cep_cobranca"] = (
-		df["cep_cobranca"].astype(str).str.replace(r"\D", "", regex=True).str.zfill(8)
-	)
-	# preserve id_transacao as string (original identifier)
-	df["id_transacao"] = df["id_transacao"].astype(str)
-	# unify naming: create `valor` from parsed BRL
-	df["valor"] = df["valor_brl"]
+    df["cpf_aluno"] = df["cpf_aluno"].map(normalize_cpf)
+    df["data_transacao"] = pd.to_datetime(df["data_transacao"], errors="coerce", dayfirst=True)
+    df["mes_referencia"] = df["data_transacao"].dt.to_period("M").astype(str)
+    df["valor_brl"] = parse_brl(df["valor_brl"])
+    
+    # Agora a limpeza com regex e zfill funcionará perfeitamente sobre a string pura
+    df["cep_cobranca"] = (
+        df["cep_cobranca"].fillna("").astype(str).str.replace(r"\D", "", regex=True).str.zfill(8)
+    )
+    
+    df["id_transacao"] = df["id_transacao"].astype(str)
+    df["valor"] = df["valor_brl"]
 
-	logger.info("Transações carregadas: %d linhas", len(df))
-	return df
+    logger.info("Transações carregadas: %d linhas", len(df))
+    return df
 
 
 def read_engagement(json_path: Path) -> pd.DataFrame:
