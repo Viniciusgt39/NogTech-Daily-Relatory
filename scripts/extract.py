@@ -63,7 +63,10 @@ def read_transactions(csv_path: Path) -> pd.DataFrame:
 	df["cep_cobranca"] = (
 		df["cep_cobranca"].astype(str).str.replace(r"\D", "", regex=True).str.zfill(8)
 	)
-	df["id_transacao"] = pd.to_numeric(df["id_transacao"], errors="coerce")
+	# preserve id_transacao as string (original identifier)
+	df["id_transacao"] = df["id_transacao"].astype(str)
+	# unify naming: create `valor` from parsed BRL
+	df["valor"] = df["valor_brl"]
 
 	logger.info("Transações carregadas: %d linhas", len(df))
 	return df
@@ -102,7 +105,41 @@ def build_extracted_dataset(
 		["data_transacao", "cpf_aluno", "id_transacao"],
 		na_position="last",
 	)
-	return merged.reset_index(drop=True)
+	merged = merged.reset_index(drop=True)
+
+	# Deriva `aulas_assistidas` e `tempo_plataforma_min` a partir de `horas_assistidas` quando disponível.
+	# - `tempo_plataforma_min` = horas_assistidas * 60 (inteiro)
+	# - `aulas_assistidas` = aproximação inteira de horas_assistidas (ex.: 1.8h -> 2 aulas)
+	if "horas_assistidas" in merged.columns:
+		merged["tempo_plataforma_min"] = (
+			merged["horas_assistidas"].apply(lambda v: int(round(v * 60)) if pd.notna(v) else None)
+		)
+		merged["aulas_assistidas"] = (
+			merged["horas_assistidas"].apply(lambda v: int(round(v)) if pd.notna(v) else None)
+		)
+	else:
+		merged["tempo_plataforma_min"] = None
+		merged["aulas_assistidas"] = None
+
+	# Seleciona e renomeia colunas conforme especificado
+	desired_cols = [
+		"id_transacao",
+		"cpf_aluno",
+		"nome_aluno",
+		"data_transacao",
+		"valor",
+		"cep_cobranca",
+		"mes_referencia",
+		"aulas_assistidas",
+		"tempo_plataforma_min",
+	]
+
+	# Garante que todas as colunas existam (preenche com None quando ausentes)
+	for c in desired_cols:
+		if c not in merged.columns:
+			merged[c] = None
+
+	return merged[desired_cols]
 
 
 def main() -> None:
