@@ -4,17 +4,18 @@ x-airflow-common: &airflow-common
   build: .
   environment:
     &airflow-common-env
-    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+    AIRFLOW__CORE__EXECUTOR: ${AIRFLOW__CORE__EXECUTOR:-LocalExecutor}
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: ${AIRFLOW__CORE__SQL_ALCHEMY_CONN:-postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow}
     # CORREÇÃO DO 403: Definindo uma chave estática para sincronizar os componentes
-    AIRFLOW__CORE__FERNET_KEY: 'nogtech_secret_key_bigdata_2026_project_etl=='
-    AIRFLOW__CORE__LOGGING_LEVEL: INFO
-    PYTHONPATH: /opt/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW__CORE__FERNET_KEY:-nogtech_secret_key_bigdata_2026_project_etl==}
+    AIRFLOW__CORE__LOGGING_LEVEL: ${AIRFLOW__CORE__LOGGING_LEVEL:-INFO}
+    PYTHONPATH: ${PYTHONPATH:-/opt/airflow}
     
-    DB_HOST: postgres
-    DB_NAME: nogtech_db
-    DB_USER: postgres
-    DB_PASSWORD: postgres
+    DB_HOST: ${DB_HOST:-postgres}
+    DB_NAME: ${DB_NAME:-nogtech_db}
+    DB_USER: ${DB_USER:-postgres}
+    DB_PASSWORD: ${DB_PASSWORD:-postgres}
+    BRASILAPI_BASE_URL: ${BRASILAPI_BASE_URL:-https://brasilapi.com.br/api}
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts

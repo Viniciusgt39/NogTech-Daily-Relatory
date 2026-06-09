@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from pathlib import Path
 import pandas as pd
 import requests
@@ -55,6 +56,11 @@ def anonimizar_cpf_lgpd(valores_cpf_padronizados: pd.Series) -> pd.Series:
     return valores_cpf_padronizados.apply(aplicar_anonimizacao)
 
 
+def get_brasilapi_base_url() -> str:
+    base_url = os.getenv("BRASILAPI_BASE_URL", "https://brasilapi.com.br/api").strip()
+    return base_url.rstrip("/")
+
+
 # --- FUNÇÃO PRINCIPAL ---
 def main() -> None:
     root_dir = Path(__file__).resolve().parents[1]
@@ -63,6 +69,7 @@ def main() -> None:
     
     cep_cache_path = root_dir / "cache" / "cep_cache.json"
     feriados_cache_path = root_dir / "cache" / "feriados_cache.json"
+    brasilapi_base_url = get_brasilapi_base_url()
 
     if not input_path.exists():
         raise FileNotFoundError(f"O arquivo de entrada gerado pelo extract.py não existe em: {input_path}")
@@ -103,7 +110,7 @@ def main() -> None:
             cidades.append(dados_regiao.get("cidade"))
             estados.append(dados_regiao.get("estado"))
         else:
-            url = f"https://brasilapi.com.br/api/cep/v2/{cep_limpo}"
+            url = f"{brasilapi_base_url}/cep/v2/{cep_limpo}"
             try:
                 logger.info("Buscando novo CEP na BrasilAPI: %s", cep_limpo)
                 response = requests.get(url, timeout=10)
@@ -159,7 +166,7 @@ def main() -> None:
         ano = dt_str[:4]
         
         if ano not in feriados_cache:
-            url = f"https://brasilapi.com.br/api/feriados/v1/{ano}"
+            url = f"{brasilapi_base_url}/feriados/v1/{ano}"
             try:
                 logger.info("Buscando feriados do ano %s na BrasilAPI...", ano)
                 response = requests.get(url, timeout=10)
