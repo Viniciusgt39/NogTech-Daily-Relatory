@@ -1,101 +1,122 @@
-version: "3.8"
+version: '3.8'
 
-x-airflow-common: &airflow-common
-  build: .
-  environment: &airflow-common-env
+x-airflow-common:
+  &airflow-common
+  image: apache/airflow:2.8.1
+  environment:
+    &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
-    AIRFLOW__CORE__FERNET_KEY: ""
-    AIRFLOW__CORE__LOGGING_LEVEL: INFO
-    PYTHONPATH: /opt/airflow
-
-    # VARIÁVEIS INJETADAS PARA O SEU LOAD.PY:
-    DB_HOST: postgres
-    DB_NAME: nogtech_db
-    DB_USER: postgres
-    DB_PASSWORD: postgres
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://nogtech:nogtech123@postgres:5432/nogtech
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+    _PIP_ADDITIONAL_REQUIREMENTS: "pandas requests psycopg2-binary pyarrow"
   volumes:
     - ./dags:/opt/airflow/dags
     - ./scripts:/opt/airflow/scripts
     - ./data:/opt/airflow/data
     - ./cache:/opt/airflow/cache
-  user: "${AIRFLOW_UID:-50000}:0"
+    - ./logs:/opt/airflow/logs
   depends_on:
-    airflow-postgres:
+    postgres:
       condition: service_healthy
 
 services:
-  # --- INFRAESTRUTURA INTERNA DO AIRFLOW ---
-  airflow-postgres:
-    image: postgres:15-alpine
-    container_name: airflow_metadata_postgres
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - airflow_metadata_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U airflow"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
+  # ─────────────────────────────────────────
+  # PostgreSQL — banco único do projeto
+  # ─────────────────────────────────────────
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: nogtech
+      POSTGRES_PASSWORD: nogtech123
+      POSTGRES_DB: nogtech
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "nogtech"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+    restart: always
+
+  # ─────────────────────────────────────────
+  # pgAdmin — interface visual do banco
+  # ─────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@nogtech.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  # ─────────────────────────────────────────
+  # Airflow — inicialização (roda uma vez)
+  # ─────────────────────────────────────────
   airflow-init:
     <<: *airflow-common
     container_name: airflow_init
-    command: version
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db migrate &&
+        airflow users create \
+          --username admin \
+          --password admin123 \
+          --firstname Admin \
+          --lastname NogTech \
+          --role Admin \
+          --email admin@nogtech.com
     environment:
       <<: *airflow-common-env
-      _AIRFLOW_DB_UPGRADE: "true"
-      _AIRFLOW_WWW_USER_CREATE: "true"
-      _AIRFLOW_WWW_USER_USERNAME: airflow
-      _AIRFLOW_WWW_USER_PASSWORD: airflow
+    restart: on-failure
 
+  # ─────────────────────────────────────────
+  # Airflow — Webserver (interface visual)
+  # ─────────────────────────────────────────
   airflow-webserver:
     <<: *airflow-common
     container_name: airflow_webserver
     command: webserver
     ports:
-      - "8082:8080" # Mudamos para 8082 para não conflitar com nada seu
+      - "8080:8080"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
     restart: always
 
+  # ─────────────────────────────────────────
+  # Airflow — Scheduler (executa as DAGs)
+  # ─────────────────────────────────────────
   airflow-scheduler:
     <<: *airflow-common
     container_name: airflow_scheduler
     command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: always
 
-  # --- SUA INFRAESTRUTURA DE APLICAÇÃO (POSTGRES + PGADMIN) ---
-  postgres:
-    image: postgres:15-alpine
-    container_name: nogtech_postgres
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: nogtech_db
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
-      - postgres_data:/var/lib/postgresql/data
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: nogtech_pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-    ports:
-      - "8080:80"
-    depends_on:
-      - postgres
-
+# ─────────────────────────────────────────
+# Volume persistente
+# ─────────────────────────────────────────
 volumes:
-  airflow_metadata_data:
   postgres_data:
