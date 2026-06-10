@@ -1,20 +1,7 @@
-# NogTech Daily Relatory — Pipeline ETL
-
-![Diagrama da Arquitetura](docs/diagrama.png)
-
-> Projeto acadêmico desenvolvido na disciplina de **Práticas Profissionais em Big Data** — UniCatólica.
-
+# NogTech Daily Relatory — Pipeline ETL (Airflow + Docker + PostgreSQL)
+# Projeto acadêmico desenvolvido na disciplina de **Práticas Profissionais em Big Data** — UniCatólica.
 ---
-
-## Integrantes
-
-| Nome | GitHub |
-|---|---|
-| Ana Caroline Leonel Brito | — |
-| Gustavo Gomes | — |
-| Vinicius Rodrigues Araújo | — |
-| Vinicius Gomes de Mello | — |
-
+![Diagrama da Arquitetura](docs/diagrama.png)
 ---
 
 ## Sobre o Projeto
@@ -25,6 +12,15 @@ O pipeline responde à seguinte pergunta de negócio:
 
 > *Quem está pagando pelos cursos, de onde vem geograficamente, em quais datas (incluindo feriados nacionais) e se essas pessoas estão realmente consumindo a plataforma?*
 
+---
+## Integrantes
+
+| Nome | GitHub |
+|---|---|
+| Ana Caroline Leonel Brito | github.com/Carol1904 |
+| Gustavo Gomes | github.com/Gustavoggomesdev |
+| Vinicius Rodrigues Araújo | github.com/Viniciusgt39 |
+| Vinicius Gomes de Mello | github.com/ViniciusGGomes |
 ---
 
 ## Arquitetura
@@ -63,7 +59,7 @@ O ambiente sobe **6 containers** via Docker Compose:
 | Container | Função |
 |---|---|
 | `postgres` | Banco de dados do projeto — armazena a tabela `fato_vendas` |
-| `airflow_metadata_postgres` | Banco interno do Airflow — armazena metadados, histórico de execuções e estado das DAGs |
+| `airflow_postgres` | Banco interno do Airflow — armazena metadados, histórico de execuções e estado das DAGs |
 | `airflow_webserver` | Interface visual do Airflow |
 | `airflow_scheduler` | Responsável por executar as DAGs |
 | `airflow_init` | Inicializa o banco do Airflow e cria o usuário admin — roda uma vez e encerra (comportamento normal) |
