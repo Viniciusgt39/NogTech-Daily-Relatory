@@ -1,53 +1,218 @@
-# NogTech Daily Relatory
+# NogTech Daily Relatory — Pipeline ETL
 
-Pipeline de dados para ingestão, transformação e carga em PostgreSQL, orquestrado com Airflow e usando arquivos Parquet como camada intermediária.
+![Diagrama da Arquitetura](docs/diagrama.png)
+
+> Projeto acadêmico desenvolvido na disciplina de **Práticas Profissionais em Big Data** — UniCatólica.
+
+---
+
+## Integrantes
+
+| Nome | GitHub |
+|---|---|
+| Ana Caroline Leonel Brito | — |
+| Gustavo Gomes | — |
+| Vinicius Rodrigues Araújo | — |
+| Vinicius Gomes de Mello | — |
+
+---
+
+## Sobre o Projeto
+
+A **NogTech** é uma plataforma fictícia de cursos de tecnologia. Este projeto implementa um pipeline de ETL automatizado para consolidar um relatório diário cruzando dados de transações financeiras com dados de engajamento dos alunos.
+
+O pipeline responde à seguinte pergunta de negócio:
+
+> *Quem está pagando pelos cursos, de onde vem geograficamente, em quais datas (incluindo feriados nacionais) e se essas pessoas estão realmente consumindo a plataforma?*
+
+---
 
 ## Arquitetura
 
-- **Entrada**: `data/transacoes_nogtech.csv` e `data/engajamento_alunos.json`
-- **Extração**: `scripts/extract.py` gera `data/processed/extraido.parquet`
-- **Transformação**: `scripts/transform.py` enriquece os dados com BrasilAPI e gera `data/processed/transformado.parquet`
-- **Carga**: `scripts/load.py` faz o UPSERT na tabela `fato_vendas` no PostgreSQL
-- **Orquestração**: `dags/nogtech_pipeline.py` executa o fluxo no Airflow
+O pipeline segue o padrão ETL orquestrado pelo Apache Airflow:
 
-## Inicialização do ambiente
-
-1. Crie o arquivo `.env` a partir de `.env.example`.
-2. Suba os serviços com:
-
-```bash
-docker compose up -d
+```
+transacoes_nogtech.csv  ──→
+                            extract.py ──→ extraido.parquet
+engajamento_alunos.json ──→
+                                               ↓
+                            transform.py ──→ transformado.parquet
+                         BrasilAPI CEP ──↗
+                     BrasilAPI Feriados ──↗
+                                               ↓
+                              load.py ──→ PostgreSQL (fato_vendas)
 ```
 
-3. Se necessário, acompanhe os logs:
+### Ferramentas e decisões
+
+| Ferramenta | Função | Motivo da escolha |
+|---|---|---|
+| **Apache Airflow** | Orquestração do pipeline | Agendamento, monitoramento visual, histórico de execuções e retries nativos |
+| **Python + pandas** | Lógica ETL | Flexibilidade e amplo suporte a manipulação de dados |
+| **PostgreSQL** | Destino final dos dados | Banco relacional robusto, suporta UPSERT nativo |
+| **pgAdmin** | Interface visual do banco | Visualização dos dados sem necessidade de linha de comando |
+| **Docker + Compose** | Containerização | Ambiente reproduzível em qualquer máquina com Docker instalado |
+| **BrasilAPI** | Enriquecimento de dados | API pública gratuita com dados de CEP e feriados nacionais |
+
+---
+
+## Containers
+
+O ambiente sobe **6 containers** via Docker Compose:
+
+| Container | Função |
+|---|---|
+| `postgres` | Banco de dados do projeto — armazena a tabela `fato_vendas` |
+| `airflow_metadata_postgres` | Banco interno do Airflow — armazena metadados, histórico de execuções e estado das DAGs |
+| `airflow_webserver` | Interface visual do Airflow |
+| `airflow_scheduler` | Responsável por executar as DAGs |
+| `airflow_init` | Inicializa o banco do Airflow e cria o usuário admin — roda uma vez e encerra (comportamento normal) |
+| `pgadmin` | Interface visual do PostgreSQL |
+
+---
+
+## Pré-requisitos
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop) instalado e em execução
+- [Git](https://git-scm.com) instalado
+
+---
+
+## Como rodar o projeto
+
+**1. Clone o repositório**
 
 ```bash
-docker compose logs -f airflow-webserver
-docker compose logs -f airflow-scheduler
-docker compose logs -f postgres
+git clone https://github.com/Viniciusgt39/NogTech-Daily-Relatory.git
+cd NogTech-Daily-Relatory
 ```
 
-## Portas de acesso
+**2. Configure o arquivo `.env`**
 
-- **Airflow Web UI**: `http://localhost:8082`
-- **pgAdmin**: `http://localhost:8080`
-- **PostgreSQL**: `localhost:5432`
+Copie o arquivo de exemplo e preencha as variáveis:
 
-## Estratégia de idempotência e falhas
+```bash
+cp .env.example .env
+```
 
-O pipeline foi desenhado para ser executado mais de uma vez sem duplicar dados. A chave natural é `id_transacao`, usada como `PRIMARY KEY` na tabela `fato_vendas`. Na carga, o [`scripts/load.py`](scripts/load.py) aplica `UPSERT` com `ON CONFLICT (id_transacao) DO UPDATE`, então uma mesma transação é inserida na primeira execução e atualizada nas próximas, em vez de gerar duplicidade.
+O arquivo `.env.example` contém todas as variáveis necessárias sem os valores reais. Preencha o `.env` com as credenciais combinadas com o time. Esse arquivo **nunca deve ser commitado** no repositório.
 
-O processamento também reduz o impacto de falhas ao usar arquivos Parquet intermediários. Assim, se uma etapa falhar, as etapas anteriores já materializadas podem ser reutilizadas sem refazer toda a extração. Além disso:
+Exemplo de `.env` para desenvolvimento:
 
-- `scripts/extract.py` valida arquivos de entrada e normaliza campos antes de gravar o Parquet.
-- `scripts/transform.py` usa cache local para evitar chamadas repetidas à BrasilAPI.
-- `scripts/load.py` converte tipos para valores nativos do Python e encerra a execução com erro explícito se a carga no banco falhar.
+```dotenv
+DB_HOST=postgres
+DB_NAME=nogtech_db
+DB_USER=postgres
+DB_PASSWORD=postgres
+```
 
-## Banco de dados
+**3. Suba o ambiente**
 
-O projeto usa PostgreSQL por ser compatível com o Airflow, suportar constraints e UPSERT de forma nativa, além de se integrar bem ao fluxo analítico do projeto.
+```bash
+docker-compose up -d
+```
+
+Aguarde todos os containers subirem. O `airflow_init` vai encerrar sozinho após inicializar — isso é esperado.
+
+**4. Acesse as interfaces**
+
+| Interface | URL | Usuário | Senha |
+|---|---|---|---|
+| Airflow | http://localhost:8082 | `airflow` | `airflow` |
+| pgAdmin | http://localhost:8080 | `admin@admin.com` | `admin` |
+
+---
+
+## Configurando o pgAdmin
+
+O pgAdmin não conecta automaticamente ao PostgreSQL — é necessário registrar o servidor uma vez.
+
+**1. Acesse** http://localhost:8080 e faça login
+
+**2. Registre o servidor**
+
+- Clique com botão direito em **Servers** → **Register** → **Server**
+- Aba **General**:
+  - Name: `NogTech`
+- Aba **Connection**:
+
+| Campo | Valor |
+|---|---|
+| Host | `postgres` |
+| Port | `5432` |
+| Database | `nogtech_db` |
+| Username | `postgres` |
+| Password | `postgres` |
+
+- Clique em **Save**
+
+**3. Navegue até a tabela**
+
+```
+Servers
+  └── NogTech
+        └── Databases
+              └── nogtech_db
+                    └── Schemas
+                          └── public
+                                └── Tables
+                                      └── fato_vendas
+```
+
+**4. Visualize os dados**
+
+Clique com botão direito em `fato_vendas` → **View/Edit Data** → **All Rows**
+
+---
+
+## Executando o Pipeline no Airflow
+
+**1.** Acesse http://localhost:8082 e faça login (airflow/airflow)
+
+**2.** Localize a DAG `pipeline_etl_nogtech` na lista
+
+**3.** Ative a DAG pelo toggle à esquerda do nome
+
+**4.** Clique no botão **Trigger DAG** (ícone ▶) para executar manualmente
+
+**5.** Clique no nome da DAG para acompanhar a execução em tempo real no grafo visual
+
+As três tasks devem ficar verdes em sequência:
+
+```
+extract >> transform >> load
+```
+
+---
+
+## Estratégia de Idempotência
+
+**Estratégia adotada: Chave natural + UPSERT**
+
+O campo `id_transacao` é a chave primária da tabela `fato_vendas`. O pipeline utiliza `INSERT ... ON CONFLICT (id_transacao) DO UPDATE`, garantindo que executar o pipeline múltiplas vezes com os mesmos dados não gera registros duplicados — apenas atualiza os existentes.
+
+Essa estratégia foi escolhida por ser a mais simples de implementar com PostgreSQL e por `id_transacao` já existir naturalmente nos dados de entrada.
+
+---
+
+## Tratamento de Falhas e Resiliência
+
+**Retries no Airflow:** as tasks que dependem da BrasilAPI estão configuradas com `retries=3` e intervalo de 30 segundos entre tentativas. Se a API estiver instável, o Airflow tenta novamente antes de marcar a task como falha.
+
+**Tolerância a falhas no Transform:** cada chamada à BrasilAPI está envolta em `try/except`. Se um CEP retornar 404 ou a API estiver fora do ar:
+- A transação é mantida no dataset com `cidade`, `estado` e `bairro` como nulos
+- O erro é registrado no log do Airflow com o CEP que falhou
+- O pipeline **não é interrompido** — as demais transações continuam sendo processadas
+
+---
 
 ## Observações
 
-- O arquivo `.env` contém valores locais de execução e não deve ser versionado.
-- O arquivo `.env.example` serve como modelo para novos ambientes.
+- O container `airflow_init` encerra após a inicialização. Isso é comportamento esperado, não um erro.
+- O arquivo `.env` não deve ser commitado. Use o `.env.example` como referência.
+- A BrasilAPI é pública e gratuita. O pipeline implementa cache local em `cache/cep_cache.json` e `cache/feriados_cache.json` para evitar chamadas repetidas à API.
+- As credenciais presentes neste projeto são de **ambiente de desenvolvimento** e não devem ser utilizadas em produção.
+
+---
+
+*Disciplina: Práticas Profissionais em Big Data — UniCatólica*
