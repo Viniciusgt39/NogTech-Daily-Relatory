@@ -1,7 +1,20 @@
+<div align="center">
+
 # NogTech Daily Relatory — Pipeline ETL (Airflow + Docker + PostgreSQL)
-# Projeto acadêmico desenvolvido na disciplina de **Práticas Profissionais em Big Data** — UniCatólica.
----
-![Diagrama da Arquitetura](docs/diagrama.png)
+
+#### Projeto acadêmico desenvolvido na disciplina de **Práticas Profissionais em Big Data** — UniCatólica.
+
+</div>
+<br>
+
+## Integrantes
+
+| Nome | GitHub |
+|---|---|
+| Ana Caroline Leonel Brito | github.com/Carol1904 |
+| Gustavo Gomes | github.com/Gustavoggomesdev |
+| Vinicius Rodrigues Araújo | github.com/Viniciusgt39 |
+| Vinicius Gomes de Mello | github.com/ViniciusGGomes |
 ---
 
 ## Sobre o Projeto
@@ -12,16 +25,9 @@ O pipeline responde à seguinte pergunta de negócio:
 
 > *Quem está pagando pelos cursos, de onde vem geograficamente, em quais datas (incluindo feriados nacionais) e se essas pessoas estão realmente consumindo a plataforma?*
 
+![Diagrama da Arquitetura](docs/diagrama.png)
 ---
-## Integrantes
 
-| Nome | GitHub |
-|---|---|
-| Ana Caroline Leonel Brito | github.com/Carol1904 |
-| Gustavo Gomes | github.com/Gustavoggomesdev |
-| Vinicius Rodrigues Araújo | github.com/Viniciusgt39 |
-| Vinicius Gomes de Mello | github.com/ViniciusGGomes |
----
 
 ## Arquitetura
 
