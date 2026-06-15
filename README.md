@@ -217,4 +217,65 @@ Essa estratégia foi escolhida por ser a mais simples de implementar com Postgre
 
 ---
 
+## 📊 Dashboard de Análise da Diretoria (Streamlit)
+
+O projeto conta com uma interface de Business Intelligence desenvolvida em **Streamlit** e **Plotly Express**, projetada para fornecer à diretoria uma visão analítica em tempo real dos dados estruturados pelo pipeline.
+
+O painel opera em **Dark Mode** nativo e exibe os seguintes indicadores obrigatórios:
+
+### 📈 Métricas Principais
+- Total de vendas absolutas
+- Faturamento bruto
+- Ticket médio por transação
+- Média de engajamento dos alunos em minutos
+
+### 📅 Análise Sazonal
+Gráficos comparativos de evolução mensal:
+- Quantidade de vendas
+- Receita gerada
+
+### 🗺️ Geolocalização
+- Ranqueamento de vendas por Estado (UF)
+
+### 🎛️ Filtros Dinâmicos
+Filtros aplicados em tempo real por:
+- Mês de Referência
+- Calendário (Dias Úteis vs Feriados)
+- Região
+
+---
+
+## 🚀 Como inicializar o Dashboard localmente
+
+Como os gráficos dependem de bibliotecas locais e da leitura do arquivo estruturado, siga os passos abaixo no terminal do seu ambiente local.
+
+### 1. Instale as dependências necessárias
+
+```bash
+pip install streamlit pandas pyarrow plotly requests
+```
+
+### 2. Execute a aplicação Streamlit
+
+```bash
+streamlit run dashboard/nogtech_dashboard.py
+```
+
+> Caso seja a primeira inicialização do Streamlit e o terminal solicite um e-mail de onboarding, basta pressionar **Enter** com o campo em branco para prosseguir.
+
+A aplicação inicializará um servidor local e abrirá automaticamente o painel no navegador através do endereço:
+
+```text
+http://localhost:8501
+```
+
+---
+
+## 📸 Evidências e Capturas do Painel
+
+### Visão Geral Executiva do Painel de Vendas
+
+<img width="1600" height="900" alt="Image" src="https://github.com/user-attachments/assets/698daef7-135e-4fa7-8fc7-7b19a8d728af" />
+
+
 *Disciplina: Práticas Profissionais em Big Data — UniCatólica*
